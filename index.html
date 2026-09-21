@@ -3,7 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="خطط">
+<meta name="theme-color" content="#2f6f5e">
 <title>خطط</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <style>
   :root{
     --bg:#f4f2ef;
@@ -367,9 +378,6 @@
     const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
     return `${y}-${m}-${day}`;
   }
-  function uid(){
-    return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
-  }
   function tomorrowKey(){
     const d = new Date(); d.setDate(d.getDate()+1);
     return fmtDateKey(d);
@@ -466,11 +474,11 @@
     const text = input.value.trim();
     if(!text) return;
     input.value='';
-    const id = uid();
-    tasks.push({id, date:activeDay, text, done:false});
+    const tempId = 'tmp_'+Date.now();
+    tasks.push({id:tempId, date:activeDay, text, done:false});
     saveLocal();
     renderDayCard();
-    syncAdd(id, activeDay, text);
+    syncAdd(tempId, activeDay, text);
   }
 
   function toggleTask(id){
@@ -509,33 +517,15 @@
     renderAll();
   }
 
-  // ---- Google Apps Script sync (JSONP — avoids CORS blocks entirely) ----
-  function jsonp(url, params){
-    return new Promise((resolve, reject)=>{
-      const cbName = 'khutat_cb_' + Date.now() + '_' + Math.floor(Math.random()*100000);
-      const script = document.createElement('script');
-      let timeoutId;
-      function cleanup(){
-        clearTimeout(timeoutId);
-        delete window[cbName];
-        if(script.parentNode) script.parentNode.removeChild(script);
-      }
-      window[cbName] = function(data){ resolve(data); cleanup(); };
-      script.onerror = function(){ reject(new Error('jsonp_load_error')); cleanup(); };
-      timeoutId = setTimeout(()=>{ reject(new Error('timeout')); cleanup(); }, 12000);
-      const qs = new URLSearchParams(Object.assign({}, params, {callback: cbName})).toString();
-      script.src = url + (url.includes('?') ? '&' : '?') + qs;
-      document.head.appendChild(script);
-    });
-  }
-
+  // ---- Google Apps Script sync ----
   async function fetchAll(){
     if(!scriptUrl){ setStatus('لسا ما ربطت جوجل شيتس — اضغط ⚙️ للإعداد'); return; }
     setStatus('جاري التحميل من الشيت...');
     try{
-      const data = await jsonp(scriptUrl, {action:'list'});
+      const res = await fetch(scriptUrl, {method:'GET'});
+      const data = await res.json();
       if(data.ok){
-        tasks = (data.tasks||[]).map(t=>({id:t.id, date:t.date, text:t.text, done: !!t.done}));
+        tasks = (data.tasks||[]).map(t=>({id:t.id, date:t.date, text:t.text, done: t.done===true||t.done==='TRUE'}));
         const remoteDays = [...new Set(tasks.map(t=>t.date))];
         remoteDays.forEach(d=>{ if(!days.includes(d)) days.push(d); });
         if(!days.includes(tomorrowKey())) days.unshift(tomorrowKey());
@@ -543,28 +533,31 @@
         renderAll();
         setStatus('متزامن مع Google Sheets ✓');
       } else {
-        setStatus('تعذّر تحميل البيانات من الشيت: ' + (data.error||''), true);
+        setStatus('تعذّر تحميل البيانات من الشيت', true);
       }
     }catch(err){
       setStatus('تعذّر الاتصال بالشيت — سيتم العمل محليًا', true);
     }
   }
 
-  function syncAdd(id, date, text){
-    jsonp(scriptUrl, {action:'add', id, date, text}).catch(()=>{
-      setStatus('تعذّر حفظ المهمة بالشيت — محفوظة محليًا فقط', true);
-    });
+  function postAction(body){
+    if(!scriptUrl) return;
+    // text/plain avoids a CORS preflight against Apps Script
+    fetch(scriptUrl, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(body)
+    }).then(async res=>{
+      const data = await res.json().catch(()=>({ok:false}));
+      if(!data.ok){ setStatus('تعذّر حفظ التغيير في الشيت', true); }
+    }).catch(()=>{ setStatus('تعذّر الاتصال بالشيت — التغيير محفوظ محليًا فقط', true); });
   }
-  function syncToggle(id, done){
-    jsonp(scriptUrl, {action:'toggle', id, done: done?'1':'0'}).catch(()=>{
-      setStatus('تعذّر تحديث الشيت — التغيير محفوظ محليًا فقط', true);
-    });
+
+  function syncAdd(tempId, date, text){
+    postAction({action:'add', id: tempId, date, text});
   }
-  function syncDelete(id){
-    jsonp(scriptUrl, {action:'delete', id}).catch(()=>{
-      setStatus('تعذّر الحذف من الشيت — تم الحذف محليًا فقط', true);
-    });
-  }
+  function syncToggle(id, done){ postAction({action:'toggle', id, done}); }
+  function syncDelete(id){ postAction({action:'delete', id}); }
 
   // ---- settings ----
   function openSettings(){
@@ -601,6 +594,12 @@
   if(scriptUrl) fetchAll();
   else setStatus('اضغط ⚙️ لربط التطبيق بجوجل شيتس');
 })();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+  });
+}
 </script>
 </body>
 </html>
