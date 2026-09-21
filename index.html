@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>خطط</title>
+<style>
+  :root{
+    --bg:#f4f2ef;
+    --card:#ffffff;
+    --ink:#2b2620;
+    --ink-soft:#7a7268;
+    --accent:#2f6f5e;
+    --accent-soft:#e6f0ec;
+    --danger:#b9503f;
+    --border:#e7e2da;
+    --done-bg:#f0f5f1;
+    --shadow: 0 2px 10px rgba(40,30,20,0.06);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background:var(--bg);
+    color:var(--ink);
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body{
+    padding-top: env(safe-area-inset-top,0px);
+    padding-bottom: env(safe-area-inset-bottom,0px);
+    min-height:100%;
+  }
+  .wrap{
+    max-width:640px;
+    margin:0 auto;
+    padding:18px 16px 90px;
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 2px 16px;
+  }
+  header h1{
+    font-size:1.5rem;
+    margin:0;
+    font-weight:800;
+    color:var(--accent);
+  }
+  .icon-btn{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    width:40px;height:40px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.1rem;
+    cursor:pointer;
+    box-shadow:var(--shadow);
+  }
+  .status{
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    text-align:center;
+    margin-bottom:10px;
+    min-height:16px;
+  }
+  .status.err{ color:var(--danger); }
+
+  .days-strip{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding:4px 2px 14px;
+    scrollbar-width:none;
+  }
+  .days-strip::-webkit-scrollbar{display:none;}
+  .day-chip{
+    flex:0 0 auto;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:9px 16px;
+    font-size:0.88rem;
+    cursor:pointer;
+    color:var(--ink-soft);
+    white-space:nowrap;
+    box-shadow:var(--shadow);
+  }
+  .day-chip.active{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+    font-weight:700;
+  }
+  .day-chip .sub{
+    display:block;
+    font-size:0.7rem;
+    opacity:0.75;
+  }
+  .add-day-chip{
+    flex:0 0 auto;
+    border:1.5px dashed var(--border);
+    background:transparent;
+    border-radius:999px;
+    padding:9px 14px;
+    font-size:0.88rem;
+    color:var(--accent);
+    cursor:pointer;
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .day-title{
+    font-size:1.15rem;
+    font-weight:800;
+    margin:0 0 2px;
+  }
+  .day-date{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    margin:0 0 14px;
+  }
+
+  .task-row{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:10px 4px;
+    border-bottom:1px solid var(--border);
+  }
+  .task-row:last-child{ border-bottom:none; }
+  .check{
+    flex:0 0 auto;
+    width:26px;height:26px;
+    border-radius:8px;
+    border:2px solid var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    color:#fff;
+    font-weight:900;
+    margin-top:1px;
+    background:#fff;
+  }
+  .check.checked{
+    background:var(--accent);
+  }
+  .task-text{
+    flex:1 1 auto;
+    font-size:0.98rem;
+    line-height:1.45;
+    padding-top:2px;
+    word-break:break-word;
+  }
+  .task-row.done .task-text{
+    color:var(--ink-soft);
+    text-decoration:line-through;
+  }
+  .task-row.done{ background:var(--done-bg); border-radius:10px; }
+  .del-btn{
+    flex:0 0 auto;
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    font-size:1.1rem;
+    cursor:pointer;
+    padding:2px 6px;
+  }
+  .del-btn:hover{ color:var(--danger); }
+
+  .empty{
+    color:var(--ink-soft);
+    font-size:0.9rem;
+    text-align:center;
+    padding:18px 0;
+  }
+
+  .add-row{
+    display:flex;
+    gap:8px;
+    margin-top:12px;
+  }
+  .add-row input{
+    flex:1 1 auto;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    font-size:0.95rem;
+    font-family:inherit;
+    background:#faf9f7;
+  }
+  .add-row input:focus{ outline:2px solid var(--accent); background:#fff; }
+  .add-row button{
+    flex:0 0 auto;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:12px;
+    padding:0 18px;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  .settings-overlay{
+    position:fixed; inset:0;
+    background:rgba(30,25,20,0.4);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:50;
+  }
+  .settings-overlay.open{ display:flex; }
+  .settings-sheet{
+    background:var(--card);
+    width:100%;
+    max-width:640px;
+    border-radius:20px 20px 0 0;
+    padding:20px 18px calc(24px + env(safe-area-inset-bottom,0px));
+  }
+  .settings-sheet h2{
+    margin:0 0 6px;
+    font-size:1.1rem;
+  }
+  .settings-sheet p{
+    font-size:0.85rem;
+    color:var(--ink-soft);
+    line-height:1.6;
+    margin:0 0 12px;
+  }
+  .settings-sheet input{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    font-size:0.9rem;
+    margin-bottom:12px;
+    font-family:inherit;
+  }
+  .settings-actions{
+    display:flex;
+    gap:10px;
+  }
+  .settings-actions button{
+    flex:1;
+    padding:12px;
+    border-radius:12px;
+    border:none;
+    font-size:0.95rem;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--accent); color:#fff; }
+  .btn-secondary{ background:var(--accent-soft); color:var(--accent); }
+
+  .day-actions{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:10px;
+  }
+  .day-actions button{
+    background:none;
+    border:none;
+    color:var(--danger);
+    font-size:0.8rem;
+    cursor:pointer;
+    padding:4px;
+  }
+
+  dialog{
+    border:none;
+    border-radius:16px;
+    padding:0;
+    max-width:320px;
+    width:90%;
+  }
+  dialog::backdrop{ background:rgba(30,25,20,0.4); }
+  .dialog-inner{ padding:18px; }
+  .dialog-inner h3{ margin:0 0 10px; font-size:1rem; }
+  .dialog-inner input{
+    width:100%;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    font-family:inherit;
+    font-size:0.95rem;
+    margin-bottom:14px;
+  }
+  .dialog-actions{ display:flex; gap:8px; }
+  .dialog-actions button{
+    flex:1;
+    padding:10px;
+    border-radius:10px;
+    border:none;
+    font-weight:700;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>خطط</h1>
+    <button class="icon-btn" id="settingsBtn" title="إعدادات المزامنة">⚙️</button>
+  </header>
+
+  <div class="status" id="statusLine"></div>
+
+  <div class="days-strip" id="daysStrip"></div>
+
+  <div class="card">
+    <p class="day-title" id="dayTitle">—</p>
+    <p class="day-date" id="dayDate">—</p>
+
+    <div id="tasksList"></div>
+    <div class="empty" id="emptyMsg" style="display:none;">ما في مهام ليوم — أضف أول مهمة 👇</div>
+
+    <div class="add-row">
+      <input id="newTaskInput" type="text" placeholder="اكتب مهمة جديدة...">
+      <button id="addTaskBtn">إضافة</button>
+    </div>
+
+    <div class="day-actions" id="dayActions" style="display:none;">
+      <button id="removeDayBtn">حذف هذا اليوم بالكامل</button>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-sheet">
+    <h2>مزامنة مع Google Sheets</h2>
+    <p>الصق هنا رابط تطبيق الويب (Web App URL) الذي حصلت عليه بعد نشر كود Google Apps Script. التطبيق بيحفظ المهام في الشيت مباشرة.</p>
+    <input id="scriptUrlInput" type="text" placeholder="https://script.google.com/macros/s/.../exec" dir="ltr">
+    <div class="settings-actions">
+      <button class="btn-secondary" id="settingsCancel">إلغاء</button>
+      <button class="btn-primary" id="settingsSave">حفظ واتصال</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="addDayDialog">
+  <div class="dialog-inner">
+    <h3>إضافة يوم جديد</h3>
+    <input id="newDayDate" type="date">
+    <div class="dialog-actions">
+      <button class="btn-secondary" id="addDayCancel">إلغاء</button>
+      <button class="btn-primary" id="addDayConfirm">إضافة</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  const LS_URL = 'khutat_script_url';
+  const LS_DAYS = 'khutat_days';        // array of date strings YYYY-MM-DD, always includes "tomorrow"
+  const LS_TASKS = 'khutat_tasks_cache'; // local cache of tasks array
+
+  const ARABIC_WEEKDAYS = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const ARABIC_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+  function fmtDateKey(d){
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function uid(){
+    return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+  }
+  function tomorrowKey(){
+    const d = new Date(); d.setDate(d.getDate()+1);
+    return fmtDateKey(d);
+  }
+  function labelForKey(key){
+    const d = new Date(key+'T00:00:00');
+    return `${ARABIC_WEEKDAYS[d.getDay()]} ${d.getDate()} ${ARABIC_MONTHS[d.getMonth()]}`;
+  }
+  function shortLabelForKey(key){
+    const todayKey = fmtDateKey(new Date());
+    if(key===tomorrowKey()) return 'غدًا';
+    if(key===todayKey) return 'اليوم';
+    const d = new Date(key+'T00:00:00');
+    return `${d.getDate()} ${ARABIC_MONTHS[d.getMonth()].slice(0,3)}`;
+  }
+
+  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzrLhhbtgQPTfWbitN0gxUk2mVloeMU4vCxcGb0hSRDgEdHW8TgpzwKKpQB6ld9m8fZ/exec';
+  let scriptUrl = localStorage.getItem(LS_URL) || DEFAULT_SCRIPT_URL;
+  let days = JSON.parse(localStorage.getItem(LS_DAYS) || 'null') || [tomorrowKey()];
+  if(!days.includes(tomorrowKey())) days.unshift(tomorrowKey());
+  let tasks = JSON.parse(localStorage.getItem(LS_TASKS) || '[]'); // {id,date,text,done}
+  let activeDay = days[0];
+
+  function saveLocal(){
+    localStorage.setItem(LS_DAYS, JSON.stringify(days));
+    localStorage.setItem(LS_TASKS, JSON.stringify(tasks));
+  }
+
+  function setStatus(msg, isErr){
+    const el = document.getElementById('statusLine');
+    el.textContent = msg || '';
+    el.className = 'status' + (isErr ? ' err' : '');
+  }
+
+  // ---- rendering ----
+  function renderDaysStrip(){
+    const strip = document.getElementById('daysStrip');
+    strip.innerHTML = '';
+    days.sort();
+    days.forEach(key=>{
+      const chip = document.createElement('div');
+      chip.className = 'day-chip' + (key===activeDay ? ' active' : '');
+      chip.innerHTML = `${shortLabelForKey(key)}`;
+      chip.onclick = ()=>{ activeDay = key; renderAll(); };
+      strip.appendChild(chip);
+    });
+    const addChip = document.createElement('div');
+    addChip.className = 'add-day-chip';
+    addChip.textContent = '+ يوم';
+    addChip.onclick = openAddDayDialog;
+    strip.appendChild(addChip);
+  }
+
+  function renderDayCard(){
+    document.getElementById('dayTitle').textContent = shortLabelForKey(activeDay);
+    document.getElementById('dayDate').textContent = labelForKey(activeDay);
+
+    const list = document.getElementById('tasksList');
+    list.innerHTML = '';
+    const dayTasks = tasks.filter(t=>t.date===activeDay);
+    document.getElementById('emptyMsg').style.display = dayTasks.length ? 'none' : 'block';
+
+    dayTasks.forEach(t=>{
+      const row = document.createElement('div');
+      row.className = 'task-row' + (t.done ? ' done' : '');
+      row.innerHTML = `
+        <div class="check ${t.done?'checked':''}" data-id="${t.id}">${t.done?'✓':''}</div>
+        <div class="task-text">${escapeHtml(t.text)}</div>
+        <button class="del-btn" data-id="${t.id}">✕</button>
+      `;
+      row.querySelector('.check').onclick = ()=>toggleTask(t.id);
+      row.querySelector('.del-btn').onclick = ()=>deleteTask(t.id);
+      list.appendChild(row);
+    });
+
+    const isTomorrow = activeDay===tomorrowKey();
+    document.getElementById('dayActions').style.display = (days.length>1 && !isTomorrow) ? 'flex' : 'none';
+  }
+
+  function renderAll(){
+    renderDaysStrip();
+    renderDayCard();
+  }
+
+  function escapeHtml(s){
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ---- actions ----
+  function addTask(){
+    const input = document.getElementById('newTaskInput');
+    const text = input.value.trim();
+    if(!text) return;
+    input.value='';
+    const id = uid();
+    tasks.push({id, date:activeDay, text, done:false});
+    saveLocal();
+    renderDayCard();
+    syncAdd(id, activeDay, text);
+  }
+
+  function toggleTask(id){
+    const t = tasks.find(x=>x.id===id);
+    if(!t) return;
+    t.done = !t.done;
+    saveLocal();
+    renderDayCard();
+    syncToggle(id, t.done);
+  }
+
+  function deleteTask(id){
+    tasks = tasks.filter(x=>x.id!==id);
+    saveLocal();
+    renderDayCard();
+    syncDelete(id);
+  }
+
+  function openAddDayDialog(){
+    const dlg = document.getElementById('addDayDialog');
+    const input = document.getElementById('newDayDate');
+    const min = new Date(); min.setDate(min.getDate()+2);
+    input.min = fmtDateKey(min);
+    input.value = fmtDateKey(min);
+    dlg.showModal();
+  }
+
+  function removeDay(){
+    if(activeDay===tomorrowKey()) return;
+    if(!confirm('حذف هذا اليوم وكل مهامه؟')) return;
+    days = days.filter(d=>d!==activeDay);
+    tasks = tasks.filter(t=>t.date!==activeDay);
+    activeDay = days[0] || tomorrowKey();
+    if(!days.includes(activeDay)) days.push(activeDay);
+    saveLocal();
+    renderAll();
+  }
+
+  // ---- Google Apps Script sync (JSONP — avoids CORS blocks entirely) ----
+  function jsonp(url, params){
+    return new Promise((resolve, reject)=>{
+      const cbName = 'khutat_cb_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+      const script = document.createElement('script');
+      let timeoutId;
+      function cleanup(){
+        clearTimeout(timeoutId);
+        delete window[cbName];
+        if(script.parentNode) script.parentNode.removeChild(script);
+      }
+      window[cbName] = function(data){ resolve(data); cleanup(); };
+      script.onerror = function(){ reject(new Error('jsonp_load_error')); cleanup(); };
+      timeoutId = setTimeout(()=>{ reject(new Error('timeout')); cleanup(); }, 12000);
+      const qs = new URLSearchParams(Object.assign({}, params, {callback: cbName})).toString();
+      script.src = url + (url.includes('?') ? '&' : '?') + qs;
+      document.head.appendChild(script);
+    });
+  }
+
+  async function fetchAll(){
+    if(!scriptUrl){ setStatus('لسا ما ربطت جوجل شيتس — اضغط ⚙️ للإعداد'); return; }
+    setStatus('جاري التحميل من الشيت...');
+    try{
+      const data = await jsonp(scriptUrl, {action:'list'});
+      if(data.ok){
+        tasks = (data.tasks||[]).map(t=>({id:t.id, date:t.date, text:t.text, done: !!t.done}));
+        const remoteDays = [...new Set(tasks.map(t=>t.date))];
+        remoteDays.forEach(d=>{ if(!days.includes(d)) days.push(d); });
+        if(!days.includes(tomorrowKey())) days.unshift(tomorrowKey());
+        saveLocal();
+        renderAll();
+        setStatus('متزامن مع Google Sheets ✓');
+      } else {
+        setStatus('تعذّر تحميل البيانات من الشيت: ' + (data.error||''), true);
+      }
+    }catch(err){
+      setStatus('تعذّر الاتصال بالشيت — سيتم العمل محليًا', true);
+    }
+  }
+
+  function syncAdd(id, date, text){
+    jsonp(scriptUrl, {action:'add', id, date, text}).catch(()=>{
+      setStatus('تعذّر حفظ المهمة بالشيت — محفوظة محليًا فقط', true);
+    });
+  }
+  function syncToggle(id, done){
+    jsonp(scriptUrl, {action:'toggle', id, done: done?'1':'0'}).catch(()=>{
+      setStatus('تعذّر تحديث الشيت — التغيير محفوظ محليًا فقط', true);
+    });
+  }
+  function syncDelete(id){
+    jsonp(scriptUrl, {action:'delete', id}).catch(()=>{
+      setStatus('تعذّر الحذف من الشيت — تم الحذف محليًا فقط', true);
+    });
+  }
+
+  // ---- settings ----
+  function openSettings(){
+    document.getElementById('scriptUrlInput').value = scriptUrl;
+    document.getElementById('settingsOverlay').classList.add('open');
+  }
+  function closeSettings(){
+    document.getElementById('settingsOverlay').classList.remove('open');
+  }
+
+  // ---- wire up ----
+  document.getElementById('addTaskBtn').onclick = addTask;
+  document.getElementById('newTaskInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addTask(); });
+  document.getElementById('settingsBtn').onclick = openSettings;
+  document.getElementById('settingsCancel').onclick = closeSettings;
+  document.getElementById('settingsSave').onclick = ()=>{
+    scriptUrl = document.getElementById('scriptUrlInput').value.trim();
+    localStorage.setItem(LS_URL, scriptUrl);
+    closeSettings();
+    fetchAll();
+  };
+  document.getElementById('removeDayBtn').onclick = removeDay;
+  document.getElementById('addDayCancel').onclick = ()=>document.getElementById('addDayDialog').close();
+  document.getElementById('addDayConfirm').onclick = ()=>{
+    const val = document.getElementById('newDayDate').value;
+    if(val && !days.includes(val)) days.push(val);
+    activeDay = val || activeDay;
+    saveLocal();
+    document.getElementById('addDayDialog').close();
+    renderAll();
+  };
+
+  renderAll();
+  if(scriptUrl) fetchAll();
+  else setStatus('اضغط ⚙️ لربط التطبيق بجوجل شيتس');
+})();
+</script>
+</body>
+</html>
