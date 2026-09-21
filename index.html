@@ -525,15 +525,20 @@
       const res = await fetch(scriptUrl, {method:'GET'});
       const data = await res.json();
       if(data.ok){
-        tasks = (data.tasks||[]).map(t=>({id:t.id, date:t.date, text:t.text, done: t.done===true||t.done==='TRUE'}));
+        const remoteTasks = (data.tasks||[]).map(t=>({id:t.id, date:t.date, text:t.text, done: t.done===true||t.done==='TRUE'}));
+        const remoteIds = new Set(remoteTasks.map(t=>t.id));
+        // أي مهمة محلية ما وصلت للشيت لسا (فشل الاتصال وقت إضافتها) ما لازم تنمسح — نحتفظ فيها ونعيد محاولة إرسالها
+        const localOnly = tasks.filter(t => !remoteIds.has(t.id));
+        tasks = [...remoteTasks, ...localOnly];
+        localOnly.forEach(t => syncAdd(t.id, t.date, t.text));
         const remoteDays = [...new Set(tasks.map(t=>t.date))];
         remoteDays.forEach(d=>{ if(!days.includes(d)) days.push(d); });
         if(!days.includes(tomorrowKey())) days.unshift(tomorrowKey());
         saveLocal();
         renderAll();
-        setStatus('متزامن مع Google Sheets ✓');
+        setStatus(localOnly.length ? `متزامن مع Google Sheets — بيعيد إرسال ${localOnly.length} عنصر ما وصل قبل هيك` : 'متزامن مع Google Sheets ✓');
       } else {
-        setStatus('تعذّر تحميل البيانات من الشيت', true);
+        setStatus('تعذّر تحميل البيانات من الشيت — بيتم العرض من آخر نسخة محفوظة محليًا', true);
       }
     }catch(err){
       setStatus('تعذّر الاتصال بالشيت — سيتم العمل محليًا', true);
